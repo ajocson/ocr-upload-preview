@@ -1,0 +1,2346 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OCR ID Upload Prototype</title>
+  <style>
+    :root {
+      --bg: #f7f8fa;
+      --surface: #ffffff;
+      --surface-soft: #f2f4f7;
+      --text: #202632;
+      --muted: #667085;
+      --line: #d7dce3;
+      --line-dark: #aeb6c2;
+      --primary: #202632;
+      --success: #15803d;
+      --danger: #c2410c;
+      --focus: #2563eb;
+      --shadow: 0 18px 55px rgba(24, 32, 44, 0.18);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.45;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .app-shell {
+      min-height: 100vh;
+      padding: 32px 20px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+    }
+
+    .screen {
+      width: min(100%, 920px);
+      display: none;
+      animation: fadeIn 180ms ease-out;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .panel {
+      width: min(100%, 540px);
+      margin: 72px auto 0;
+      padding: 32px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 30px rgba(30, 41, 59, 0.06);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1 {
+      margin-bottom: 24px;
+      font-size: 30px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin-bottom: 8px;
+      font-size: 28px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .subtitle,
+    .helper {
+      color: var(--muted);
+    }
+
+    .helper {
+      margin: 8px 0 24px;
+      font-size: 14px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    select,
+    input[type="file"] {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid var(--line-dark);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    select {
+      padding: 0 12px;
+    }
+
+    input[type="file"] {
+      padding: 10px;
+    }
+
+    .btn-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn {
+      min-height: 44px;
+      padding: 0 18px;
+      border-radius: 6px;
+      border: 1px solid var(--line-dark);
+      background: var(--surface);
+      color: var(--text);
+      transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      border-color: #808a98;
+      background: #fafafa;
+    }
+
+    .btn.primary {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn.primary:hover {
+      background: #0f172a;
+    }
+
+    .btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+      transform: none;
+    }
+
+    .icon-btn {
+      width: 36px;
+      height: 36px;
+      display: inline-grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--muted);
+    }
+
+    .icon-btn:hover {
+      color: var(--text);
+      border-color: var(--line-dark);
+    }
+
+    /* Modal flow */
+    .modal-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(15, 23, 42, 0.42);
+    }
+
+    .modal-layer.open {
+      display: flex;
+      animation: fadeIn 160ms ease-out;
+    }
+
+    .modal {
+      width: min(100%, 920px);
+      max-height: min(92vh, 860px);
+      overflow: auto;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      animation: riseIn 180ms ease-out;
+    }
+
+    .modal.compact {
+      width: min(100%, 780px);
+    }
+
+    .modal-header {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 28px 32px 18px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .modal-header p {
+      margin-bottom: 0;
+    }
+
+    .modal-body {
+      padding: 24px 32px 32px;
+    }
+
+    .modal-footer {
+      position: sticky;
+      bottom: 0;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 18px 32px;
+      background: var(--surface);
+      border-top: 1px solid var(--line);
+    }
+
+    .guideline-list {
+      display: grid;
+      gap: 16px;
+    }
+
+    .guideline-row {
+      display: grid;
+      grid-template-columns: 1fr 140px 140px;
+      gap: 16px;
+      align-items: center;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    .guideline-text {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .example {
+      position: relative;
+      min-height: 82px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--surface-soft);
+    }
+
+    .example-card {
+      height: 44px;
+      margin: 10px auto 0;
+      border: 2px solid #9aa3af;
+      border-radius: 4px;
+      background:
+        linear-gradient(90deg, transparent 0 55%, rgba(255, 255, 255, 0.65) 55% 64%, transparent 64%),
+        #fff;
+    }
+
+    .example.correct .example-card {
+      width: 82%;
+    }
+
+    .example.incorrect .example-card {
+      width: 62%;
+      transform: rotate(-8deg);
+      border-style: dashed;
+      opacity: 0.8;
+    }
+
+    .example-icon {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 700;
+      background: #fff;
+    }
+
+    .example.correct .example-icon {
+      color: var(--success);
+      border: 1px solid #86efac;
+    }
+
+    .example.incorrect .example-icon {
+      color: var(--danger);
+      border: 1px solid #fdba74;
+    }
+
+    .example-label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .requirements {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 22px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-soft);
+    }
+
+    .file-types {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      padding: 0 10px;
+      border: 1px solid var(--line-dark);
+      border-radius: 999px;
+      background: #fff;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .sample-passport {
+      position: relative;
+      width: min(100%, 620px);
+      min-height: 360px;
+      margin: 8px auto 0;
+      padding: 26px;
+      border: 1px solid var(--line-dark);
+      border-radius: 10px;
+      background:
+        linear-gradient(90deg, transparent 50%, rgba(0, 0, 0, 0.03) 50%),
+        #fbfcfd;
+      box-shadow: inset 0 0 0 8px #eef1f5;
+    }
+
+    .passport-spread {
+      display: grid;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: 20px;
+      height: 308px;
+    }
+
+    .passport-photo,
+    .passport-lines {
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .passport-photo {
+      align-self: start;
+      height: 160px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .passport-lines {
+      height: 100%;
+      padding: 18px;
+    }
+
+    .line {
+      height: 12px;
+      margin-bottom: 13px;
+      border-radius: 999px;
+      background: #d8dde5;
+    }
+
+    .line.short {
+      width: 56%;
+    }
+
+    .line.medium {
+      width: 78%;
+    }
+
+    .line.long {
+      width: 100%;
+    }
+
+    .ocr-zone {
+      position: absolute;
+      border: 2px solid var(--focus);
+      border-radius: 4px;
+      background: rgba(37, 99, 235, 0.09);
+    }
+
+    .zone-name {
+      left: 48%;
+      top: 112px;
+      width: 38%;
+      height: 46px;
+    }
+
+    .zone-number {
+      left: 48%;
+      top: 190px;
+      width: 34%;
+      height: 38px;
+    }
+
+    .zone-mrz {
+      left: 8%;
+      right: 8%;
+      bottom: 38px;
+      height: 42px;
+    }
+
+    .sample-visual.national .sample-passport,
+    .sample-visual.driver .sample-passport {
+      display: none;
+    }
+
+    .national-guide,
+    .driver-guide {
+      display: none;
+    }
+
+    .sample-visual.national .national-guide {
+      display: grid;
+    }
+
+    .sample-visual.driver .driver-guide {
+      display: grid;
+    }
+
+    .national-guide,
+    .driver-guide {
+      width: min(100%, 720px);
+      margin: 8px auto 0;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .national-sample,
+    .driver-sample {
+      display: grid;
+      gap: 8px;
+      justify-items: center;
+    }
+
+    .national-sample-label,
+    .driver-sample-label {
+      min-width: 82px;
+      padding: 5px 18px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      color: #344054;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .national-id-card,
+    .driver-card {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1.586 / 1;
+      overflow: hidden;
+      border: 1px solid var(--line-dark);
+      border-radius: 12px;
+      background:
+        radial-gradient(circle at 70% 55%, rgba(248, 113, 113, 0.18), transparent 30%),
+        radial-gradient(circle at 52% 45%, rgba(56, 189, 248, 0.18), transparent 26%),
+        repeating-linear-gradient(18deg, rgba(148, 163, 184, 0.13) 0 1px, transparent 1px 5px),
+        #fff;
+    }
+
+    .national-id-card.front::before {
+      content: "";
+      position: absolute;
+      left: 7%;
+      top: 10%;
+      width: 13%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ef4444 0 50%, #1d4ed8 51%);
+      box-shadow: 0 0 0 2px #fff, 0 0 0 3px #cbd5e1;
+    }
+
+    .national-title {
+      position: absolute;
+      left: 25%;
+      top: 8%;
+      right: 15%;
+      color: #111827;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .national-fingerprint {
+      position: absolute;
+      right: 8%;
+      top: 10%;
+      width: 11%;
+      aspect-ratio: 1;
+      border: 3px solid #ef4444;
+      border-radius: 4px;
+      background: repeating-radial-gradient(circle, #111827 0 2px, transparent 2px 5px);
+    }
+
+    .national-photo {
+      position: absolute;
+      left: 8%;
+      top: 40%;
+      width: 22%;
+      height: 34%;
+      border-radius: 5px;
+      background:
+        radial-gradient(circle at 50% 30%, #ffd7bd 0 18%, transparent 19%),
+        linear-gradient(#111827 0 0) center 28% / 48% 26% no-repeat,
+        linear-gradient(#1e3a8a 0 0) center bottom / 82% 34% no-repeat,
+        #fff;
+    }
+
+    .national-highlight {
+      position: absolute;
+      border: 3px solid #6d28d9;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .national-number-zone {
+      left: 5%;
+      top: 30%;
+      width: 31%;
+      height: 9%;
+    }
+
+    .national-name-zone {
+      left: 43%;
+      top: 30%;
+      width: 41%;
+      height: 35%;
+    }
+
+    .national-birth-zone {
+      left: 43%;
+      top: 66%;
+      width: 41%;
+      height: 13%;
+    }
+
+    .national-address-zone {
+      left: 8%;
+      right: 14%;
+      bottom: 4%;
+      height: 18%;
+    }
+
+    .national-back-copy {
+      position: absolute;
+      left: 7%;
+      top: 20%;
+      width: 39%;
+      display: grid;
+      gap: 7px;
+    }
+
+    .national-back-copy span {
+      height: 7px;
+      border-radius: 999px;
+      background: #9aa3af;
+    }
+
+    .national-back-copy span:nth-child(even) {
+      width: 72%;
+    }
+
+    .national-qr {
+      position: absolute;
+      right: 8%;
+      top: 10%;
+      width: 42%;
+      aspect-ratio: 1;
+      border: 6px solid #fff;
+      background:
+        linear-gradient(90deg, #111 9px, transparent 9px 15px) 0 0 / 21px 21px,
+        linear-gradient(#111 9px, transparent 9px 15px) 0 0 / 21px 21px,
+        repeating-conic-gradient(#111 0 25%, #fff 0 50%) 0 0 / 12px 12px;
+      box-shadow: 0 0 0 1px #d1d5db;
+    }
+
+    .national-barcode {
+      position: absolute;
+      right: 10%;
+      bottom: 12%;
+      width: 34%;
+      height: 10%;
+      background: repeating-linear-gradient(90deg, #111 0 2px, #fff 2px 4px, #111 4px 5px, #fff 5px 8px);
+    }
+
+    .driver-card {
+      border-radius: 10px;
+      background:
+        linear-gradient(135deg, rgba(37, 99, 235, 0.18), transparent 40%),
+        radial-gradient(circle at 78% 42%, rgba(16, 185, 129, 0.16), transparent 28%),
+        #f8fafc;
+    }
+
+    .driver-card.front::before {
+      content: "DRIVER'S LICENSE";
+      position: absolute;
+      left: 6%;
+      top: 7%;
+      color: #1f2937;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .driver-photo {
+      position: absolute;
+      left: 7%;
+      top: 24%;
+      width: 24%;
+      height: 46%;
+      border-radius: 5px;
+      background:
+        radial-gradient(circle at 50% 30%, #ffd7bd 0 18%, transparent 19%),
+        linear-gradient(#111827 0 0) center 28% / 48% 26% no-repeat,
+        linear-gradient(#374151 0 0) center bottom / 82% 34% no-repeat,
+        #fff;
+    }
+
+    .driver-line-group {
+      position: absolute;
+      left: 36%;
+      top: 24%;
+      right: 8%;
+      display: grid;
+      gap: 9px;
+    }
+
+    .driver-line-group span,
+    .driver-back-lines span {
+      height: 8px;
+      border-radius: 999px;
+      background: #9aa3af;
+    }
+
+    .driver-line-group span:nth-child(2),
+    .driver-back-lines span:nth-child(3) {
+      width: 76%;
+    }
+
+    .driver-highlight {
+      position: absolute;
+      border: 3px solid #2563eb;
+      border-radius: 4px;
+      background: rgba(37, 99, 235, 0.08);
+    }
+
+    .driver-license-zone {
+      left: 36%;
+      top: 24%;
+      width: 44%;
+      height: 12%;
+    }
+
+    .driver-name-zone {
+      left: 36%;
+      top: 42%;
+      width: 48%;
+      height: 15%;
+    }
+
+    .driver-expiry-zone {
+      left: 7%;
+      right: 12%;
+      bottom: 12%;
+      height: 13%;
+    }
+
+    .driver-back-strip {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 12%;
+      height: 20%;
+      background: #111827;
+    }
+
+    .driver-back-lines {
+      position: absolute;
+      left: 8%;
+      top: 42%;
+      width: 48%;
+      display: grid;
+      gap: 9px;
+    }
+
+    .driver-barcode {
+      position: absolute;
+      right: 8%;
+      top: 42%;
+      width: 30%;
+      height: 26%;
+      background: repeating-linear-gradient(90deg, #111 0 2px, #fff 2px 5px, #111 5px 6px, #fff 6px 10px);
+      border: 5px solid #fff;
+      box-shadow: 0 0 0 1px #d1d5db;
+    }
+
+    .driver-signature {
+      position: absolute;
+      left: 8%;
+      right: 10%;
+      bottom: 12%;
+      height: 12%;
+      border: 3px solid #2563eb;
+      border-radius: 4px;
+    }
+
+    /* Upload and reposition flow */
+    .upload-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 270px;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .upload-card {
+      padding: 24px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .upload-card h1,
+    .upload-card > .subtitle,
+    .upload-card > .mini-note {
+      width: min(100%, 620px);
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .upload-card > .mini-note {
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .upload-layout.no-side-panel {
+      grid-template-columns: minmax(0, 760px);
+      justify-content: center;
+    }
+
+    .crop-frame {
+      position: relative;
+      width: min(100%, 620px);
+      aspect-ratio: 1.586 / 1;
+      margin: 24px auto 18px;
+      overflow: hidden;
+      border: 2px dashed #7b8491;
+      border-radius: var(--radius);
+      background:
+        linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+        #eef1f5;
+      background-size: 33.33% 33.33%;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .crop-frame.has-image {
+      background: #111827;
+      cursor: grab;
+    }
+
+    .crop-frame.dragging {
+      cursor: grabbing;
+    }
+
+    .crop-image {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      max-width: none;
+      transform-origin: center;
+      will-change: transform;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    .crop-empty {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      color: var(--muted);
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .crop-overlay {
+      position: absolute;
+      left: var(--crop-left, 9%);
+      top: var(--crop-top, 9%);
+      width: var(--crop-width, 82%);
+      height: var(--crop-height, 82%);
+      border: 2px solid #22c55e;
+      border-radius: 6px;
+      box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.34);
+      pointer-events: none;
+    }
+
+    .crop-frame:not(.has-image) .crop-overlay,
+    .crop-frame:not(.has-image) .crop-handle {
+      display: none;
+    }
+
+    .crop-handle {
+      position: absolute;
+      z-index: 1;
+      width: 22px;
+      height: 22px;
+      border: 2px solid #14532d;
+      background: #22c55e;
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    .crop-handle.top-left {
+      top: var(--crop-top, 9%);
+      left: var(--crop-left, 9%);
+      transform: translate(-50%, -50%);
+      border-top-left-radius: 6px;
+      cursor: nwse-resize;
+    }
+
+    .crop-handle.top-right {
+      top: var(--crop-top, 9%);
+      left: calc(var(--crop-left, 9%) + var(--crop-width, 82%));
+      transform: translate(-50%, -50%);
+      border-top-right-radius: 6px;
+      cursor: nesw-resize;
+    }
+
+    .crop-handle.bottom-left {
+      top: calc(var(--crop-top, 9%) + var(--crop-height, 82%));
+      left: var(--crop-left, 9%);
+      transform: translate(-50%, -50%);
+      border-bottom-left-radius: 6px;
+      cursor: nesw-resize;
+    }
+
+    .crop-handle.bottom-right {
+      top: calc(var(--crop-top, 9%) + var(--crop-height, 82%));
+      left: calc(var(--crop-left, 9%) + var(--crop-width, 82%));
+      transform: translate(-50%, -50%);
+      border-bottom-right-radius: 6px;
+      cursor: nwse-resize;
+    }
+
+    .crop-handle.bottom-right::after {
+      content: "";
+      position: absolute;
+      right: 1px;
+      bottom: 1px;
+      width: 8px;
+      height: 8px;
+      border-right: 2px solid #dcfce7;
+      border-bottom: 2px solid #dcfce7;
+    }
+
+    .crop-handle.top,
+    .crop-handle.bottom {
+      left: calc(var(--crop-left, 9%) + var(--crop-width, 82%) / 2);
+      width: 42px;
+      height: 14px;
+      border-radius: 999px;
+      cursor: ns-resize;
+    }
+
+    .crop-handle.top {
+      top: var(--crop-top, 9%);
+      transform: translate(-50%, -50%);
+    }
+
+    .crop-handle.bottom {
+      top: calc(var(--crop-top, 9%) + var(--crop-height, 82%));
+      transform: translate(-50%, -50%);
+    }
+
+    .crop-handle.left,
+    .crop-handle.right {
+      top: calc(var(--crop-top, 9%) + var(--crop-height, 82%) / 2);
+      width: 14px;
+      height: 42px;
+      border-radius: 999px;
+      cursor: ew-resize;
+    }
+
+    .crop-handle.left {
+      left: var(--crop-left, 9%);
+      transform: translate(-50%, -50%);
+    }
+
+    .crop-handle.right {
+      left: calc(var(--crop-left, 9%) + var(--crop-width, 82%));
+      transform: translate(-50%, -50%);
+    }
+
+    .crop-frame.resizing .crop-handle {
+      background: #86efac;
+      box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.24);
+    }
+
+    .merge-summary {
+      width: min(100%, 620px);
+      margin: -4px auto 16px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .merge-summary strong {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .merge-summary[hidden] {
+      display: none;
+    }
+
+    .control-stack {
+      display: grid;
+      gap: 16px;
+      position: sticky;
+      top: 24px;
+    }
+
+    .control-stack.is-uploaded {
+      display: none;
+    }
+
+    .drop-zone {
+      padding: 18px;
+      border: 1px dashed var(--line-dark);
+      border-radius: var(--radius);
+      background: #fff;
+      transition: border-color 150ms ease, background 150ms ease;
+    }
+
+    .drop-zone.drag-over {
+      border-color: var(--focus);
+      background: #eff6ff;
+    }
+
+    .drop-zone.uploaded {
+      display: none;
+    }
+
+    .drop-zone p {
+      margin-bottom: 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .drop-zone .merge-hint {
+      margin-top: -4px;
+      font-size: 13px;
+    }
+
+    .zoom-control {
+      width: min(100%, 310px);
+      margin: 0 auto 18px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    .crop-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .crop-action-btn {
+      min-height: 38px;
+      border: 1px solid var(--line-dark);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text);
+      font-weight: 700;
+      transition: background 150ms ease, border-color 150ms ease;
+    }
+
+    .crop-action-btn:hover {
+      border-color: #808a98;
+      background: var(--surface-soft);
+    }
+
+    .zoom-row {
+      display: grid;
+      grid-template-columns: 36px minmax(0, 1fr) 36px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .rotate-label {
+      margin-top: 14px;
+    }
+
+    .zoom-btn {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line-dark);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text);
+      font-size: 20px;
+      line-height: 1;
+      transition: background 150ms ease, border-color 150ms ease;
+    }
+
+    .zoom-btn:hover {
+      border-color: #808a98;
+      background: var(--surface-soft);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--primary);
+    }
+
+    .mini-note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* Uploading state and toast */
+    .upload-status {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 20;
+      width: min(320px, calc(100vw - 48px));
+      padding: 16px;
+      display: none;
+      gap: 14px;
+      align-items: center;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .upload-status.show {
+      display: flex;
+      animation: riseIn 160ms ease-out;
+    }
+
+    .spinner {
+      width: 34px;
+      height: 34px;
+      border: 3px solid #e5e7eb;
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 800ms linear infinite;
+      flex: 0 0 auto;
+    }
+
+    .progress-shell {
+      height: 6px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e5e7eb;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--primary);
+      transition: width 240ms ease;
+    }
+
+    .upload-status h3,
+    .toast h3 {
+      margin: 0 0 2px;
+      font-size: 15px;
+    }
+
+    .upload-status p,
+    .toast p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .status-copy {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .toast {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 25;
+      width: min(360px, calc(100vw - 48px));
+      padding: 16px;
+      display: none;
+      align-items: flex-start;
+      gap: 12px;
+      border: 1px solid #bbf7d0;
+      border-radius: var(--radius);
+      background: #f0fdf4;
+      box-shadow: 0 14px 40px rgba(22, 101, 52, 0.14);
+    }
+
+    .toast.show {
+      display: flex;
+      animation: slideIn 180ms ease-out;
+    }
+
+    .toast-icon {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--success);
+      font-weight: 700;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes riseIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(16px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 820px) {
+      .app-shell {
+        padding: 20px 14px;
+      }
+
+      .screen {
+        width: 100%;
+      }
+
+      .panel {
+        margin-top: 26px;
+        padding: 24px;
+      }
+
+      .modal-layer {
+        align-items: flex-start;
+        padding: 12px;
+      }
+
+      .modal {
+        width: 100%;
+        max-height: calc(100vh - 24px);
+      }
+
+      .modal-header,
+      .modal-body,
+      .modal-footer {
+        padding-left: 18px;
+        padding-right: 18px;
+      }
+
+      .modal-header {
+        align-items: flex-start;
+      }
+
+      .guideline-row {
+        grid-template-columns: 1fr;
+      }
+
+      .guideline-row .example {
+        min-height: 94px;
+      }
+
+      .upload-layout {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .control-stack {
+        position: static;
+      }
+
+      .upload-card {
+        padding: 20px;
+      }
+
+      .crop-frame {
+        width: min(100%, 620px);
+        margin-top: 18px;
+      }
+
+      .national-guide,
+      .driver-guide {
+        width: 100%;
+        gap: 12px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .app-shell {
+        padding: 12px;
+      }
+
+      .panel {
+        margin-top: 10px;
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 25px;
+      }
+
+      h2 {
+        font-size: 23px;
+      }
+
+      .btn-row,
+      .modal-footer {
+        align-items: stretch;
+        flex-direction: column-reverse;
+      }
+
+      .btn {
+        width: 100%;
+      }
+
+      .modal-header {
+        gap: 10px;
+        padding-top: 18px;
+        padding-bottom: 14px;
+      }
+
+      .modal-body {
+        padding-top: 18px;
+        padding-bottom: 22px;
+      }
+
+      .modal-footer {
+        padding-top: 14px;
+        padding-bottom: 14px;
+      }
+
+      .icon-btn {
+        width: 34px;
+        height: 34px;
+        flex: 0 0 auto;
+      }
+
+      .guideline-row {
+        gap: 12px;
+      }
+
+      .passport-spread {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+
+      .sample-passport {
+        min-height: 440px;
+      }
+
+      .national-guide {
+        grid-template-columns: 1fr;
+      }
+
+      .driver-guide {
+        grid-template-columns: 1fr;
+      }
+
+      .sample-passport {
+        padding: 18px;
+      }
+
+      .upload-card {
+        padding: 18px 14px;
+      }
+
+      .upload-card h1,
+      .upload-card > .subtitle,
+      .upload-card > .mini-note {
+        width: min(100%, 620px);
+      }
+
+      .crop-frame {
+        width: 100%;
+      }
+
+      .zoom-control {
+        width: min(100%, 310px);
+        padding: 14px;
+      }
+
+      .zoom-row {
+        grid-template-columns: 34px minmax(0, 1fr) 34px;
+        gap: 8px;
+      }
+
+      .zoom-btn {
+        width: 34px;
+        height: 34px;
+      }
+
+      .upload-status {
+        right: 12px;
+        bottom: 12px;
+        width: calc(100vw - 24px);
+      }
+
+      .toast {
+        top: 12px;
+        right: 12px;
+        width: calc(100vw - 24px);
+      }
+    }
+
+    @media (max-width: 380px) {
+      h1 {
+        font-size: 23px;
+      }
+
+      h2 {
+        font-size: 21px;
+      }
+
+      .modal-header,
+      .modal-body,
+      .modal-footer {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      .sample-passport {
+        min-height: 390px;
+        padding: 14px;
+      }
+
+      .zoom-control {
+        width: 100%;
+      }
+
+      .requirements {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <!-- Major flow section: ID type selection -->
+    <section class="screen active" id="select-screen" aria-labelledby="select-title">
+      <div class="panel">
+        <h1 id="select-title">Upload Valid ID</h1>
+        <label for="id-type">ID Type</label>
+        <select id="id-type">
+          <option>Passport</option>
+          <option>Driver's License</option>
+          <option>National ID</option>
+        </select>
+        <p class="helper">Make sure the uploaded IDs match the selected ID type.</p>
+        <button class="btn primary" id="start-upload">Upload ID</button>
+      </div>
+    </section>
+
+    <!-- Major flow section: front image repositioning -->
+    <section class="screen" id="front-screen" aria-labelledby="front-title">
+      <div class="upload-layout">
+        <div class="upload-card">
+          <h1 id="front-title">Front ID</h1>
+          <p class="subtitle">Reposition the image so the ID fits inside the frame.</p>
+          <div class="crop-frame" id="front-crop" aria-label="Front ID crop frame">
+            <img class="crop-image" alt="Front ID preview">
+            <div class="crop-empty">Select or drop an image to preview it here.</div>
+            <div class="crop-overlay"></div>
+            <div class="crop-handle top-left" data-crop-handle="top-left" aria-label="Resize crop area"></div>
+            <div class="crop-handle top" data-crop-handle="top" aria-label="Resize crop area"></div>
+            <div class="crop-handle top-right" data-crop-handle="top-right" aria-label="Resize crop area"></div>
+            <div class="crop-handle left" data-crop-handle="left" aria-label="Resize crop area"></div>
+            <div class="crop-handle right" data-crop-handle="right" aria-label="Resize crop area"></div>
+            <div class="crop-handle bottom-left" data-crop-handle="bottom-left" aria-label="Resize crop area"></div>
+            <div class="crop-handle bottom" data-crop-handle="bottom" aria-label="Resize crop area"></div>
+            <div class="crop-handle bottom-right" data-crop-handle="bottom-right" aria-label="Resize crop area"></div>
+          </div>
+          <div class="merge-summary" id="front-merge-summary" hidden></div>
+          <p class="mini-note">Drag the image to reposition it. Use zoom for a closer fit.</p>
+          <div class="zoom-control">
+            <label for="front-zoom">Zoom</label>
+            <div class="zoom-row">
+              <button class="zoom-btn" type="button" data-zoom-action="out" data-zoom-target="front-zoom" aria-label="Zoom out">-</button>
+              <input type="range" id="front-zoom" min="0.8" max="4.68" step="0.01" value="1">
+              <button class="zoom-btn" type="button" data-zoom-action="in" data-zoom-target="front-zoom" aria-label="Zoom in">+</button>
+            </div>
+            <label class="rotate-label" for="front-rotate">Rotate</label>
+            <div class="zoom-row">
+              <button class="zoom-btn" type="button" data-rotate-action="out" data-rotate-target="front-rotate" aria-label="Rotate counterclockwise">-</button>
+              <input type="range" id="front-rotate" min="-15" max="15" step="1" value="0">
+              <button class="zoom-btn" type="button" data-rotate-action="in" data-rotate-target="front-rotate" aria-label="Rotate clockwise">+</button>
+            </div>
+            <div class="crop-actions">
+              <button class="crop-action-btn" type="button" data-crop-action="fit" data-crop-target="front-crop">Fit</button>
+              <button class="crop-action-btn" type="button" data-crop-action="center" data-crop-target="front-crop">Center</button>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn" id="front-back">Re-upload</button>
+            <button class="btn primary" id="front-next" disabled>Next</button>
+          </div>
+        </div>
+        <aside class="control-stack" aria-label="Front upload controls">
+          <div class="drop-zone" data-target="front">
+            <label for="front-file">Upload one or more files</label>
+            <p>PNG, JPG, or PDF. Select multiple files to merge into one upload document.</p>
+            <p class="merge-hint">Drag and drop multiple files here, or use the file picker.</p>
+            <input type="file" id="front-file" accept="image/*,.pdf" multiple>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Major flow section: back image repositioning -->
+    <section class="screen" id="back-screen" aria-labelledby="back-title">
+      <div class="upload-layout">
+        <div class="upload-card">
+          <h1 id="back-title">Back ID</h1>
+          <p class="subtitle">Reposition the image so the ID fits inside the frame.</p>
+          <div class="crop-frame" id="back-crop" aria-label="Back ID crop frame">
+            <img class="crop-image" alt="Back ID preview">
+            <div class="crop-empty">Select or drop an image to preview it here.</div>
+            <div class="crop-overlay"></div>
+            <div class="crop-handle top-left" data-crop-handle="top-left" aria-label="Resize crop area"></div>
+            <div class="crop-handle top" data-crop-handle="top" aria-label="Resize crop area"></div>
+            <div class="crop-handle top-right" data-crop-handle="top-right" aria-label="Resize crop area"></div>
+            <div class="crop-handle left" data-crop-handle="left" aria-label="Resize crop area"></div>
+            <div class="crop-handle right" data-crop-handle="right" aria-label="Resize crop area"></div>
+            <div class="crop-handle bottom-left" data-crop-handle="bottom-left" aria-label="Resize crop area"></div>
+            <div class="crop-handle bottom" data-crop-handle="bottom" aria-label="Resize crop area"></div>
+            <div class="crop-handle bottom-right" data-crop-handle="bottom-right" aria-label="Resize crop area"></div>
+          </div>
+          <p class="mini-note">Drag the image to reposition it. Use zoom for a closer fit.</p>
+          <div class="zoom-control">
+            <label for="back-zoom">Zoom</label>
+            <div class="zoom-row">
+              <button class="zoom-btn" type="button" data-zoom-action="out" data-zoom-target="back-zoom" aria-label="Zoom out">-</button>
+              <input type="range" id="back-zoom" min="0.8" max="4.68" step="0.01" value="1">
+              <button class="zoom-btn" type="button" data-zoom-action="in" data-zoom-target="back-zoom" aria-label="Zoom in">+</button>
+            </div>
+            <label class="rotate-label" for="back-rotate">Rotate</label>
+            <div class="zoom-row">
+              <button class="zoom-btn" type="button" data-rotate-action="out" data-rotate-target="back-rotate" aria-label="Rotate counterclockwise">-</button>
+              <input type="range" id="back-rotate" min="-15" max="15" step="1" value="0">
+              <button class="zoom-btn" type="button" data-rotate-action="in" data-rotate-target="back-rotate" aria-label="Rotate clockwise">+</button>
+            </div>
+            <div class="crop-actions">
+              <button class="crop-action-btn" type="button" data-crop-action="fit" data-crop-target="back-crop">Fit</button>
+              <button class="crop-action-btn" type="button" data-crop-action="center" data-crop-target="back-crop">Center</button>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn" id="back-back">Back</button>
+            <button class="btn primary" id="confirm-upload" disabled>Confirm</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Major flow section: "How to Upload" modal -->
+  <div class="modal-layer" id="how-modal" role="dialog" aria-modal="true" aria-labelledby="how-title">
+    <section class="modal">
+      <header class="modal-header">
+        <div>
+          <h2 id="how-title">How to Upload an ID</h2>
+          <p class="subtitle">Follow these guidelines to help ensure successful verification.</p>
+        </div>
+        <button class="icon-btn" data-close-modal aria-label="Close modal">X</button>
+      </header>
+      <div class="modal-body">
+        <div class="guideline-list" id="guideline-list"></div>
+        <div class="requirements">
+          <div>
+            <strong>Accepted file types</strong>
+            <div class="file-types" aria-label="Accepted file types">
+              <span class="chip">PNG</span>
+              <span class="chip">JPG</span>
+              <span class="chip">PDF</span>
+            </div>
+          </div>
+          <strong>Maximum combined file size: 4MB</strong>
+        </div>
+      </div>
+      <footer class="modal-footer">
+        <button class="btn primary" id="how-next">Next</button>
+      </footer>
+    </section>
+  </div>
+
+  <!-- Major flow section: sample ID modal -->
+  <div class="modal-layer" id="sample-modal" role="dialog" aria-modal="true" aria-labelledby="sample-title">
+    <section class="modal compact">
+      <header class="modal-header">
+        <div>
+          <h2 id="sample-title">Upload Your Passport</h2>
+          <p class="subtitle">Use this sample as a guide. Make sure highlighted details are clear and readable.</p>
+        </div>
+        <button class="icon-btn" data-close-modal aria-label="Close modal">X</button>
+      </header>
+      <div class="modal-body">
+        <div class="sample-visual" id="sample-visual">
+          <div class="sample-passport" aria-label="Sample passport placeholder with OCR zones">
+            <div class="passport-spread">
+              <div>
+                <div class="passport-photo">Photo</div>
+              </div>
+              <div class="passport-lines">
+                <div class="line short"></div>
+                <div class="line long"></div>
+                <div class="line medium"></div>
+                <div class="line long"></div>
+                <div class="line short"></div>
+                <div class="line medium"></div>
+              </div>
+            </div>
+            <div class="ocr-zone zone-name" title="Name OCR zone"></div>
+            <div class="ocr-zone zone-number" title="Passport number OCR zone"></div>
+            <div class="ocr-zone zone-mrz" title="Machine readable zone"></div>
+          </div>
+
+          <div class="national-guide" aria-label="Sample National ID front and back guide">
+            <div class="national-sample">
+              <div class="national-sample-label">FRONT</div>
+              <div class="national-id-card front">
+                <div class="national-title">REPUBLIKA NG PILIPINAS<br>PAMBANSANG PAGKAKAKILANLAN</div>
+                <div class="national-fingerprint"></div>
+                <div class="national-photo"></div>
+                <div class="national-highlight national-number-zone"></div>
+                <div class="national-highlight national-name-zone"></div>
+                <div class="national-highlight national-birth-zone"></div>
+                <div class="national-highlight national-address-zone"></div>
+              </div>
+            </div>
+            <div class="national-sample">
+              <div class="national-sample-label">BACK</div>
+              <div class="national-id-card back">
+                <div class="national-back-copy">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                <div class="national-qr"></div>
+                <div class="national-barcode"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="driver-guide" aria-label="Sample Driver's License front and back guide">
+            <div class="driver-sample">
+              <div class="driver-sample-label">FRONT</div>
+              <div class="driver-card front">
+                <div class="driver-photo"></div>
+                <div class="driver-line-group">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                <div class="driver-highlight driver-license-zone"></div>
+                <div class="driver-highlight driver-name-zone"></div>
+                <div class="driver-highlight driver-expiry-zone"></div>
+              </div>
+            </div>
+            <div class="driver-sample">
+              <div class="driver-sample-label">BACK</div>
+              <div class="driver-card back">
+                <div class="driver-back-strip"></div>
+                <div class="driver-back-lines">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                <div class="driver-barcode"></div>
+                <div class="driver-signature"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <footer class="modal-footer">
+        <button class="btn" id="sample-back">Back</button>
+        <button class="btn primary" id="begin-reposition">Upload ID</button>
+      </footer>
+    </section>
+  </div>
+
+  <!-- Major flow section: mock uploading state -->
+  <div class="upload-status" id="upload-status" role="status" aria-live="polite">
+    <div class="spinner" aria-hidden="true"></div>
+    <div class="status-copy">
+      <h3>Uploading ID...</h3>
+      <p>Please wait</p>
+      <div class="progress-shell" aria-hidden="true">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Major flow section: success toast -->
+  <div class="toast" id="success-toast" role="status" aria-live="polite">
+    <div class="toast-icon" aria-hidden="true">✓</div>
+    <div>
+      <h3>Upload Successful</h3>
+      <p>The ID images were uploaded successfully.</p>
+    </div>
+  </div>
+
+  <script>
+    const screens = {
+      select: document.getElementById('select-screen'),
+      front: document.getElementById('front-screen'),
+      back: document.getElementById('back-screen')
+    };
+
+    const modals = {
+      how: document.getElementById('how-modal'),
+      sample: document.getElementById('sample-modal')
+    };
+
+    const uploadStatus = document.getElementById('upload-status');
+    const progressBar = document.getElementById('progress-bar');
+    const uploadStatusMessage = uploadStatus.querySelector('p');
+    const successToast = document.getElementById('success-toast');
+    const idTypeSelect = document.getElementById('id-type');
+
+    const uploaders = {};
+    let isOpeningFrontUploadFromSample = false;
+    const defaultCropBox = {
+      left: 9,
+      top: 9,
+      right: 91,
+      bottom: 91,
+      width: 82,
+      height: 82
+    };
+    const minimumCropBox = {
+      width: defaultCropBox.width * 0.7,
+      height: defaultCropBox.height * 0.7
+    };
+
+    function requiresBackSide() {
+      return idTypeSelect.value !== 'Passport';
+    }
+
+    function getUploadedImageSubtitle() {
+      return idTypeSelect.value === 'Passport'
+        ? 'Make sure all details are clear and readable before proceeding.'
+        : 'Reposition the image so the ID fits inside the frame.';
+    }
+
+    /* Major flow section: screen and modal navigation */
+    function showScreen(name) {
+      Object.values(screens).forEach((screen) => screen.classList.remove('active'));
+      document.getElementById('front-next').textContent = requiresBackSide() ? 'Next' : 'Confirm';
+      screens[name].classList.add('active');
+      requestAnimationFrame(() => {
+        if (uploaders[name] && uploaders[name].refreshFit) {
+          uploaders[name].refreshFit();
+        }
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function openModal(name) {
+      modals[name].classList.add('open');
+    }
+
+    function closeModals() {
+      Object.values(modals).forEach((modal) => modal.classList.remove('open'));
+      isOpeningFrontUploadFromSample = false;
+    }
+
+    document.getElementById('start-upload').addEventListener('click', () => openModal('how'));
+    document.getElementById('how-next').addEventListener('click', () => {
+      closeModals();
+      updateSampleTitle();
+      openModal('sample');
+    });
+    document.getElementById('sample-back').addEventListener('click', () => {
+      closeModals();
+      openModal('how');
+    });
+    document.getElementById('begin-reposition').addEventListener('click', () => {
+      const frontFileInput = document.getElementById('front-file');
+      isOpeningFrontUploadFromSample = true;
+      frontFileInput.value = '';
+      frontFileInput.click();
+    });
+    document.getElementById('front-back').addEventListener('click', () => {
+      showScreen('select');
+      openModal('sample');
+    });
+    document.getElementById('front-next').addEventListener('click', () => {
+      if (!requiresBackSide()) {
+        simulateUpload();
+        return;
+      }
+
+      uploaders.back.useExistingPreview(uploaders.front.getPreview());
+      showScreen('back');
+    });
+    document.getElementById('back-back').addEventListener('click', () => showScreen('front'));
+    document.getElementById('confirm-upload').addEventListener('click', simulateUpload);
+
+    document.querySelectorAll('[data-close-modal]').forEach((button) => {
+      button.addEventListener('click', closeModals);
+    });
+
+    document.querySelectorAll('.modal-layer').forEach((layer) => {
+      layer.addEventListener('click', (event) => {
+        if (event.target === layer) closeModals();
+      });
+    });
+
+    function updateSampleTitle() {
+      const sampleVisual = document.getElementById('sample-visual');
+      document.getElementById('sample-title').textContent = `Upload Your ${idTypeSelect.value}`;
+      sampleVisual.classList.toggle('national', idTypeSelect.value === 'National ID');
+      sampleVisual.classList.toggle('driver', idTypeSelect.value === "Driver's License");
+    }
+
+    /* Major flow section: guideline checklist rendering */
+    const guidelines = [
+      'Make sure the uploaded photo captures all four edges of the ID',
+      'Make sure the uploaded photo is clear and not blurry',
+      'Make sure the uploaded photo has no glare or reflections',
+      'Make sure the uploaded IDs match the selected ID type'
+    ];
+
+    const guidelineList = document.getElementById('guideline-list');
+    guidelineList.innerHTML = guidelines.map((text) => `
+      <div class="guideline-row">
+        <div class="guideline-text">${text}</div>
+        <div class="example correct" aria-label="Correct example">
+          <span class="example-label">Correct</span>
+          <span class="example-icon">✓</span>
+          <div class="example-card"></div>
+        </div>
+        <div class="example incorrect" aria-label="Incorrect example">
+          <span class="example-label">Incorrect</span>
+          <span class="example-icon">X</span>
+          <div class="example-card"></div>
+        </div>
+      </div>
+    `).join('');
+
+    /* Major flow section: image upload, drag, drop, and zoom */
+    function createUploader(config) {
+      const crop = document.getElementById(config.cropId);
+      const image = crop.querySelector('.crop-image');
+      const empty = crop.querySelector('.crop-empty');
+      const mergeSummary = config.summaryId ? document.getElementById(config.summaryId) : null;
+      const fileInput = config.fileId ? document.getElementById(config.fileId) : null;
+      const zoomInput = document.getElementById(config.zoomId);
+      const rotateInput = document.getElementById(config.rotateId);
+      const nextButton = document.getElementById(config.nextId);
+      const dropZone = config.target ? document.querySelector(`.drop-zone[data-target="${config.target}"]`) : null;
+      const state = {
+        objectUrl: '',
+        x: 0,
+        y: 0,
+        scale: Number(zoomInput.value),
+        rotation: Number(rotateInput.value),
+        dragging: false,
+        startX: 0,
+        startY: 0,
+        originX: 0,
+        originY: 0,
+        resizing: false,
+        resizeHandle: '',
+        resizeStartX: 0,
+        resizeStartY: 0,
+        cropLeft: defaultCropBox.left,
+        cropTop: defaultCropBox.top,
+        cropWidth: defaultCropBox.width,
+        cropHeight: defaultCropBox.height,
+        resizeStartCrop: null,
+        hasImage: false,
+        isPdf: false,
+        files: [],
+        mergedLabel: ''
+      };
+
+      function applyCropBox() {
+        crop.style.setProperty('--crop-left', `${state.cropLeft}%`);
+        crop.style.setProperty('--crop-top', `${state.cropTop}%`);
+        crop.style.setProperty('--crop-width', `${state.cropWidth}%`);
+        crop.style.setProperty('--crop-height', `${state.cropHeight}%`);
+      }
+
+      function render() {
+        image.style.transform = `translate(calc(-50% + ${state.x}px), calc(-50% + ${state.y}px)) rotate(${state.rotation}deg) scale(${state.scale})`;
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function resetCropBox() {
+        state.cropLeft = defaultCropBox.left;
+        state.cropTop = defaultCropBox.top;
+        state.cropWidth = defaultCropBox.width;
+        state.cropHeight = defaultCropBox.height;
+        applyCropBox();
+      }
+
+      function fitImageToFrame() {
+        if (!image.naturalWidth || !image.naturalHeight) return;
+
+        const frame = crop.getBoundingClientRect();
+        const targetWidth = frame.width * 0.82;
+        const targetHeight = frame.height * 0.82;
+        const imageRatio = image.naturalWidth / image.naturalHeight;
+        const targetRatio = targetWidth / targetHeight;
+
+        if (imageRatio > targetRatio) {
+          image.style.width = `${targetWidth}px`;
+          image.style.height = 'auto';
+          return;
+        }
+
+        image.style.width = 'auto';
+        image.style.height = `${targetHeight}px`;
+      }
+
+      function resetPosition(options = {}) {
+        if (options.fit) fitImageToFrame();
+        state.x = 0;
+        state.y = 0;
+        state.scale = 1;
+        state.rotation = 0;
+        zoomInput.value = '1';
+        rotateInput.value = '0';
+        render();
+      }
+
+      function centerPosition() {
+        state.x = 0;
+        state.y = 0;
+        render();
+      }
+
+      function refreshFit() {
+        if (!state.hasImage || state.isPdf || !image.naturalWidth) return;
+        const rendered = image.getBoundingClientRect();
+        if (rendered.width > 2 && rendered.height > 2) return;
+        resetPosition({ fit: true });
+      }
+
+      function formatBytes(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      }
+
+      function updateMergeSummary() {
+        if (!mergeSummary) return;
+        if (!state.files.length) {
+          mergeSummary.hidden = true;
+          mergeSummary.innerHTML = '';
+          return;
+        }
+
+        const totalSize = state.files.reduce((sum, file) => sum + file.size, 0);
+        const fileNames = state.files.map((file) => file.name).join(', ');
+        const title = state.files.length > 1
+          ? `${state.files.length} files merged into 1 upload document`
+          : '1 file ready to upload';
+        mergeSummary.innerHTML = `
+          <strong>${title}</strong>
+          ${fileNames} · ${formatBytes(totalSize)} · High-resolution source retained
+        `;
+        mergeSummary.hidden = false;
+      }
+
+      function loadImageFromFile(file) {
+        return new Promise((resolve, reject) => {
+          const url = URL.createObjectURL(file);
+          const previewImage = new Image();
+          previewImage.onload = () => {
+            URL.revokeObjectURL(url);
+            resolve(previewImage);
+          };
+          previewImage.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error(`Unable to preview ${file.name}`));
+          };
+          previewImage.src = url;
+        });
+      }
+
+      async function createMergedImagePreview(files) {
+        const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+        if (!imageFiles.length) return '';
+        if (imageFiles.length === 1) return URL.createObjectURL(imageFiles[0]);
+
+        const loadedImages = await Promise.all(imageFiles.map(loadImageFromFile));
+        const pageGap = 96;
+        const padding = 96;
+        const pageWidth = Math.max(...loadedImages.map((previewImage) => previewImage.naturalWidth || previewImage.width)) + padding * 2;
+        const pageHeights = loadedImages.map((previewImage) => (previewImage.naturalHeight || previewImage.height) + padding * 2);
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
+        canvas.width = pageWidth;
+        canvas.height = pageHeights.reduce((sum, height) => sum + height, 0) + (loadedImages.length - 1) * pageGap;
+        context.fillStyle = '#eef1f5';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        let pageY = 0;
+        loadedImages.forEach((previewImage, index) => {
+          const imageWidth = previewImage.naturalWidth || previewImage.width;
+          const imageHeight = previewImage.naturalHeight || previewImage.height;
+          const pageHeight = pageHeights[index];
+          context.fillStyle = '#ffffff';
+          context.fillRect(0, pageY, pageWidth, pageHeight);
+          context.strokeStyle = '#cbd5e1';
+          context.lineWidth = 3;
+          context.strokeRect(18, pageY + 18, pageWidth - 36, pageHeight - 36);
+
+          const drawX = Math.round((pageWidth - imageWidth) / 2);
+          const drawY = pageY + padding;
+          context.drawImage(previewImage, drawX, drawY, imageWidth, imageHeight);
+          pageY += pageHeight + pageGap;
+        });
+
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        return blob ? URL.createObjectURL(blob) : canvas.toDataURL('image/png');
+      }
+
+      async function useFiles(fileList) {
+        const files = Array.from(fileList || []).filter(Boolean);
+        if (!files.length) return;
+        if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
+
+        state.files = files;
+        state.hasImage = true;
+        state.isPdf = files.every((file) => file.type === 'application/pdf');
+        state.mergedLabel = files.length > 1
+          ? `${files.length} files merged into one document`
+          : files[0].name;
+        state.objectUrl = state.isPdf
+          ? URL.createObjectURL(files[0])
+          : await createMergedImagePreview(files);
+        image.src = state.objectUrl;
+        image.style.display = state.isPdf || !state.objectUrl ? 'none' : 'block';
+        image.onload = () => resetPosition({ fit: true });
+        empty.textContent = !state.isPdf && state.objectUrl
+          ? ''
+          : `${state.mergedLabel}. Reposition preview is available for image files only.`;
+        empty.style.display = !state.isPdf && state.objectUrl ? 'none' : 'grid';
+        crop.classList.add('has-image');
+        crop.closest('.upload-card').querySelector('.subtitle').textContent = getUploadedImageSubtitle();
+        updateMergeSummary();
+        hideUploadPanel();
+        nextButton.disabled = false;
+        resetPosition({ fit: true });
+        resetCropBox();
+        if (config.onFileReady) config.onFileReady();
+      }
+
+      function useExistingPreview(preview) {
+        if (!preview || !preview.src) return;
+        if (state.objectUrl) {
+          URL.revokeObjectURL(state.objectUrl);
+          state.objectUrl = '';
+        }
+
+        state.hasImage = true;
+        state.isPdf = preview.isPdf;
+        state.files = preview.files || [];
+        state.mergedLabel = preview.mergedLabel || '';
+        image.src = preview.src;
+        image.style.display = preview.isPdf ? 'none' : 'block';
+        image.onload = () => resetPosition({ fit: true });
+        empty.textContent = preview.isPdf
+          ? `${state.mergedLabel || 'PDF selected'}. Reposition preview is available for image files only.`
+          : '';
+        empty.style.display = preview.isPdf ? 'grid' : 'none';
+        crop.classList.add('has-image');
+        crop.closest('.upload-card').querySelector('.subtitle').textContent = getUploadedImageSubtitle();
+        updateMergeSummary();
+        hideUploadPanel();
+        nextButton.disabled = false;
+        resetPosition({ fit: true });
+        resetCropBox();
+      }
+
+      function hideUploadPanel() {
+        const layout = crop.closest('.upload-layout');
+        layout.classList.add('no-side-panel');
+        if (!dropZone) return;
+        dropZone.classList.add('uploaded');
+        dropZone.parentElement.classList.add('is-uploaded');
+      }
+
+      function getPreview() {
+        return {
+          src: state.objectUrl || image.src,
+          isPdf: state.isPdf,
+          files: state.files,
+          mergedLabel: state.mergedLabel
+        };
+      }
+
+      if (fileInput) {
+        fileInput.addEventListener('change', (event) => useFiles(event.target.files));
+      }
+
+      crop.addEventListener('pointerdown', (event) => {
+        if (!state.hasImage || image.style.display === 'none') return;
+        const handle = event.target.closest('[data-crop-handle]');
+        if (handle) {
+          event.preventDefault();
+          state.resizing = true;
+          state.resizeHandle = handle.dataset.cropHandle;
+          state.resizeStartX = event.clientX;
+          state.resizeStartY = event.clientY;
+          state.resizeStartCrop = {
+            left: state.cropLeft,
+            top: state.cropTop,
+            width: state.cropWidth,
+            height: state.cropHeight
+          };
+          crop.classList.add('resizing');
+          crop.setPointerCapture(event.pointerId);
+          return;
+        }
+
+        state.dragging = true;
+        state.startX = event.clientX;
+        state.startY = event.clientY;
+        state.originX = state.x;
+        state.originY = state.y;
+        crop.classList.add('dragging');
+        crop.setPointerCapture(event.pointerId);
+      });
+
+      crop.addEventListener('pointermove', (event) => {
+        if (state.resizing && state.resizeStartCrop) {
+          event.preventDefault();
+          const frame = crop.getBoundingClientRect();
+          const deltaX = ((event.clientX - state.resizeStartX) / frame.width) * 100;
+          const deltaY = ((event.clientY - state.resizeStartY) / frame.height) * 100;
+          const start = state.resizeStartCrop;
+          const maxInset = 3;
+
+          let nextLeft = start.left;
+          let nextTop = start.top;
+          let nextWidth = start.width;
+          let nextHeight = start.height;
+          const startRight = start.left + start.width;
+          const startBottom = start.top + start.height;
+
+          if (state.resizeHandle.includes('left')) {
+            const maxLeft = startRight - minimumCropBox.width;
+            nextLeft = clamp(start.left + deltaX, maxInset, maxLeft);
+            nextWidth = startRight - nextLeft;
+          }
+
+          if (state.resizeHandle.includes('right')) {
+            const minRight = start.left + minimumCropBox.width;
+            const nextRight = clamp(startRight + deltaX, minRight, 100 - maxInset);
+            nextWidth = nextRight - start.left;
+          }
+
+          if (state.resizeHandle.includes('top')) {
+            const maxTop = startBottom - minimumCropBox.height;
+            nextTop = clamp(start.top + deltaY, maxInset, maxTop);
+            nextHeight = startBottom - nextTop;
+          }
+
+          if (state.resizeHandle.includes('bottom')) {
+            const minBottom = start.top + minimumCropBox.height;
+            const nextBottom = clamp(startBottom + deltaY, minBottom, 100 - maxInset);
+            nextHeight = nextBottom - start.top;
+          }
+
+          state.cropLeft = nextLeft;
+          state.cropTop = nextTop;
+          state.cropWidth = nextWidth;
+          state.cropHeight = nextHeight;
+          applyCropBox();
+          return;
+        }
+
+        if (!state.dragging) return;
+        state.x = state.originX + event.clientX - state.startX;
+        state.y = state.originY + event.clientY - state.startY;
+        render();
+      });
+
+      function endPointer(event) {
+        if (state.resizing) {
+          state.resizing = false;
+          state.resizeHandle = '';
+          state.resizeStartCrop = null;
+          crop.classList.remove('resizing');
+          if (crop.hasPointerCapture(event.pointerId)) {
+            crop.releasePointerCapture(event.pointerId);
+          }
+          return;
+        }
+
+        state.dragging = false;
+        crop.classList.remove('dragging');
+      }
+
+      crop.addEventListener('pointerup', endPointer);
+      crop.addEventListener('pointercancel', endPointer);
+
+      zoomInput.addEventListener('input', () => {
+        state.scale = Number(zoomInput.value);
+        render();
+      });
+
+      rotateInput.addEventListener('input', () => {
+        state.rotation = Number(rotateInput.value);
+        render();
+      });
+
+      document.querySelectorAll(`[data-zoom-target="${config.zoomId}"]`).forEach((button) => {
+        button.addEventListener('click', () => {
+          const direction = button.dataset.zoomAction === 'in' ? 1 : -1;
+          const nextValue = Number(zoomInput.value) + direction * 0.1;
+          const min = Number(zoomInput.min);
+          const max = Number(zoomInput.max);
+          zoomInput.value = Math.min(max, Math.max(min, nextValue)).toFixed(2);
+          zoomInput.dispatchEvent(new Event('input'));
+        });
+      });
+
+      document.querySelectorAll(`[data-rotate-target="${config.rotateId}"]`).forEach((button) => {
+        button.addEventListener('click', () => {
+          const direction = button.dataset.rotateAction === 'in' ? 1 : -1;
+          const nextValue = Number(rotateInput.value) + direction;
+          const min = Number(rotateInput.min);
+          const max = Number(rotateInput.max);
+          rotateInput.value = Math.min(max, Math.max(min, nextValue));
+          rotateInput.dispatchEvent(new Event('input'));
+        });
+      });
+
+      document.querySelectorAll(`[data-crop-target="${config.cropId}"]`).forEach((button) => {
+        button.addEventListener('click', () => {
+          if (!state.hasImage || image.style.display === 'none') return;
+          if (button.dataset.cropAction === 'fit') {
+            resetPosition({ fit: true });
+            resetCropBox();
+            return;
+          }
+
+          centerPosition();
+        });
+      });
+
+      if (dropZone) {
+        ['dragenter', 'dragover'].forEach((eventName) => {
+          dropZone.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            dropZone.classList.add('drag-over');
+          });
+        });
+
+        ['dragleave', 'drop'].forEach((eventName) => {
+          dropZone.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            dropZone.classList.remove('drag-over');
+          });
+        });
+
+        dropZone.addEventListener('drop', (event) => {
+          useFiles(event.dataTransfer.files);
+        });
+      }
+
+      render();
+      applyCropBox();
+      return {
+        get hasImage() {
+          return state.hasImage;
+        },
+        getPreview,
+        refreshFit,
+        useExistingPreview
+      };
+    }
+
+    uploaders.front = createUploader({
+      target: 'front',
+      cropId: 'front-crop',
+      summaryId: 'front-merge-summary',
+      fileId: 'front-file',
+      zoomId: 'front-zoom',
+      rotateId: 'front-rotate',
+      nextId: 'front-next',
+      onFileReady: () => {
+        if (!isOpeningFrontUploadFromSample) return;
+        closeModals();
+        showScreen('front');
+      }
+    });
+
+    uploaders.back = createUploader({
+      cropId: 'back-crop',
+      zoomId: 'back-zoom',
+      rotateId: 'back-rotate',
+      nextId: 'confirm-upload'
+    });
+
+    /* Major flow section: mock upload simulation and success toast */
+    function simulateUpload() {
+      const steps = [14, 29, 47, 64, 82, 96, 100];
+      let index = 0;
+      const confirmButton = document.getElementById('confirm-upload');
+      const frontPreview = uploaders.front.getPreview();
+
+      uploadStatus.classList.add('show');
+      progressBar.style.width = '0%';
+      uploadStatusMessage.textContent = frontPreview.files && frontPreview.files.length > 1
+        ? 'Merging files into one document'
+        : 'Please wait';
+      confirmButton.disabled = true;
+
+      const timer = setInterval(() => {
+        progressBar.style.width = `${steps[index]}%`;
+        index += 1;
+
+        if (index >= steps.length) {
+          clearInterval(timer);
+          setTimeout(() => {
+            uploadStatus.classList.remove('show');
+            showToast();
+            showScreen('select');
+            confirmButton.disabled = !uploaders.back.hasImage;
+          }, 520);
+        }
+      }, 420);
+    }
+
+    function showToast() {
+      successToast.classList.add('show');
+      setTimeout(() => successToast.classList.remove('show'), 3600);
+    }
+  </script>
+</body>
+</html>
