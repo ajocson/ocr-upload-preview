@@ -690,6 +690,134 @@
       font-weight: 700;
     }
 
+    .uploaded-id-state {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .owner-card.id-uploaded .ocr-banner,
+    .owner-card.id-uploaded .alert-banner,
+    .owner-card.id-uploaded .field-row {
+      display: none;
+    }
+
+    .owner-card.id-uploaded .uploaded-id-state {
+      display: flex;
+    }
+
+    .uploaded-field-row {
+      display: flex;
+      gap: 16px;
+      align-items: flex-end;
+      width: 100%;
+    }
+
+    .readonly-id-field {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .readonly-id-number {
+      position: relative;
+      flex: 0 0 254.5px;
+    }
+
+    .readonly-value {
+      min-height: 45px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      border-radius: 8px;
+      background: #dedede;
+      color: #7b7b7b;
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .edit-id-link {
+      position: absolute;
+      right: 0;
+      top: 0;
+      border: 0;
+      background: transparent;
+      color: #a82675;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    .uploaded-id-title {
+      margin: 0;
+    }
+
+    .uploaded-card {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      justify-content: center;
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #ececec;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .uploaded-card-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .uploaded-card-head strong {
+      color: #263234;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.64px;
+    }
+
+    .uploaded-card-head span {
+      color: #5c5c5c;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .uploaded-file-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .uploaded-file-row p {
+      flex: 1;
+      min-width: 0;
+      margin: 0;
+      overflow: hidden;
+      color: #263234;
+      font-size: 13px;
+      line-height: 1.4;
+      letter-spacing: -0.39px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .delete-upload {
+      border: 0;
+      background: transparent;
+      color: #a82675;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    .disabled-check.is-enabled {
+      background: #3a1971;
+      color: #fff;
+      cursor: pointer;
+    }
+
     .floating-actions {
       position: absolute;
       left: 0;
@@ -3041,6 +3169,31 @@
                   </button>
                 </div>
               </div>
+
+              <div class="uploaded-id-state" aria-live="polite">
+                <div class="uploaded-field-row">
+                  <div class="readonly-id-field">
+                    <span class="select-label">Select ID Type</span>
+                    <div class="readonly-value" id="uploaded-id-type">Driver's License</div>
+                  </div>
+                  <div class="readonly-id-field readonly-id-number">
+                    <button class="edit-id-link" type="button">Edit</button>
+                    <span class="select-label">ID Number</span>
+                    <div class="readonly-value" id="uploaded-id-number">001234567891</div>
+                  </div>
+                </div>
+                <h2 class="section-title uploaded-id-title">Uploaded ID</h2>
+                <div class="uploaded-card">
+                  <div class="uploaded-card-head">
+                    <strong id="uploaded-id-label">Driver's License (Policy Owner)</strong>
+                    <span id="uploaded-id-date">Feb/27/2026</span>
+                  </div>
+                  <div class="uploaded-file-row">
+                    <p id="uploaded-id-file">810000053151_Carlo Bella Lendio_Drivers License (Policy Insured)_DLPI.pdf</p>
+                    <button class="delete-upload" id="delete-uploaded-id" type="button">Delete</button>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="disabled-action-row">
               <button class="disabled-check" type="button" disabled>Check for Existing Records</button>
@@ -3178,7 +3331,7 @@
             </div>
             <div class="adjust-panel" data-adjust-content="front-zoom">
               <button class="zoom-btn" type="button" data-zoom-action="out" data-zoom-target="front-zoom" aria-label="Zoom out">-</button>
-              <input type="range" id="front-zoom" min="0.8" max="4.68" step="0.01" value="1">
+              <input type="range" id="front-zoom" min="0.8" max="7.31" step="0.01" value="1">
               <button class="zoom-btn" type="button" data-zoom-action="in" data-zoom-target="front-zoom" aria-label="Zoom in">+</button>
             </div>
             <div class="adjust-panel" data-adjust-content="front-rotate">
@@ -3304,7 +3457,7 @@
             </div>
             <div class="adjust-panel" data-adjust-content="back-zoom">
               <button class="zoom-btn" type="button" data-zoom-action="out" data-zoom-target="back-zoom" aria-label="Zoom out">-</button>
-              <input type="range" id="back-zoom" min="0.8" max="4.68" step="0.01" value="1">
+              <input type="range" id="back-zoom" min="0.8" max="7.31" step="0.01" value="1">
               <button class="zoom-btn" type="button" data-zoom-action="in" data-zoom-target="back-zoom" aria-label="Zoom in">+</button>
             </div>
             <div class="adjust-panel" data-adjust-content="back-rotate">
@@ -3485,6 +3638,12 @@
     const successToast = document.getElementById('success-toast');
     const idTypeSelect = document.getElementById('id-type');
     const driverLicenseNote = document.getElementById('driver-license-note');
+    const ownerCard = document.querySelector('.owner-card');
+    const checkExistingButton = document.querySelector('.disabled-check');
+    const uploadedIdType = document.getElementById('uploaded-id-type');
+    const uploadedIdLabel = document.getElementById('uploaded-id-label');
+    const uploadedIdFile = document.getElementById('uploaded-id-file');
+    const deleteUploadedId = document.getElementById('delete-uploaded-id');
 
     const uploaders = {};
     let isOpeningFrontUploadFromSample = false;
@@ -3513,6 +3672,38 @@
 
     function updateDriverLicenseNote() {
       driverLicenseNote.classList.toggle('is-hidden', idTypeSelect.value !== "Driver's License");
+    }
+
+    function getSelectedIdTypeLabel() {
+      return idTypeSelect.value === "Driver's License" ? 'Driver’s License' : idTypeSelect.value;
+    }
+
+    function getUploadFileDisplayName() {
+      const frontPreview = uploaders.front && uploaders.front.getPreview ? uploaders.front.getPreview() : {};
+      const files = frontPreview.files || [];
+
+      if (files.length === 1 && files[0].name) {
+        return files[0].name;
+      }
+
+      const cleanLabel = getSelectedIdTypeLabel().replace(/[’']/g, '').replace(/\s+/g, ' ');
+      return `810000053151_Carlo Bella Lendio_${cleanLabel} (Policy Insured)_DLPI.pdf`;
+    }
+
+    function applyUploadedIdState() {
+      const label = getSelectedIdTypeLabel();
+      ownerCard.classList.add('id-uploaded');
+      uploadedIdType.textContent = label;
+      uploadedIdLabel.textContent = `${label} (Policy Owner)`;
+      uploadedIdFile.textContent = getUploadFileDisplayName();
+      checkExistingButton.disabled = false;
+      checkExistingButton.classList.add('is-enabled');
+    }
+
+    function resetUploadedIdState() {
+      ownerCard.classList.remove('id-uploaded');
+      checkExistingButton.disabled = true;
+      checkExistingButton.classList.remove('is-enabled');
     }
 
     function getUploadedImageSubtitle(side, hasFile) {
@@ -3652,6 +3843,12 @@
       });
     });
 
+    deleteUploadedId.addEventListener('click', () => {
+      resetUploadedIdState();
+      uploaders.front.resetForUpload();
+      uploaders.back.resetForUpload();
+    });
+
     function updateSampleTitle() {
       const sampleVisual = document.getElementById('sample-visual');
       const sampleFrontImage = document.getElementById('sample-front-img');
@@ -3699,6 +3896,7 @@
       updateDriverLicenseNote();
       updateSampleTitle();
       updateUploadTitles();
+      resetUploadedIdState();
     });
 
     updateDriverLicenseNote();
@@ -3807,8 +4005,12 @@
 
       function clampPosition() {
         const frame = crop.getBoundingClientRect();
-        const maxX = frame.width * 0.42;
-        const maxY = frame.height * 0.42;
+        const baseWidth = image.offsetWidth || image.getBoundingClientRect().width / Math.max(state.scale, 0.01);
+        const baseHeight = image.offsetHeight || image.getBoundingClientRect().height / Math.max(state.scale, 0.01);
+        const scaledWidth = baseWidth * state.scale;
+        const scaledHeight = baseHeight * state.scale;
+        const maxX = Math.max(frame.width * 0.12, (scaledWidth + frame.width) / 2 - 48);
+        const maxY = Math.max(frame.height * 0.12, (scaledHeight + frame.height) / 2 - 48);
         state.x = clamp(state.x, -maxX, maxX);
         state.y = clamp(state.y, -maxY, maxY);
       }
@@ -4433,6 +4635,7 @@
             uploadStatus.classList.remove('show');
             showToast();
             showScreen('select');
+            applyUploadedIdState();
             confirmButton.disabled = !uploaders.back.hasImage;
             uploadTimer = null;
           }, 520);
