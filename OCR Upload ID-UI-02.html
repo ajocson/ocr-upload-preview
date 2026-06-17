@@ -2211,7 +2211,8 @@
       cursor: grabbing;
     }
 
-    .crop-image {
+    .crop-image,
+    .crop-pdf {
       position: absolute;
       left: 50%;
       top: 50%;
@@ -2223,7 +2224,90 @@
       transition: transform 160ms ease-out;
     }
 
-    .crop-frame.dragging .crop-image {
+    .crop-pdf {
+      width: min(82%, 430px);
+      min-height: 232px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      color: #243b5a;
+      overflow: visible;
+      text-align: center;
+    }
+
+    .pdf-native-preview {
+      width: 100%;
+      height: var(--pdf-page-height, 232px);
+      min-height: 232px;
+      display: block;
+      margin: 0;
+      border: 0;
+      background: #fff;
+      box-shadow: none;
+      pointer-events: none;
+    }
+
+    .pdf-page-preview {
+      display: grid;
+      gap: 10px;
+      justify-items: center;
+      max-width: 100%;
+      padding: 24px;
+    }
+
+    .pdf-page-icon {
+      width: 54px;
+      height: 68px;
+      position: relative;
+      display: grid;
+      place-items: end center;
+      padding-bottom: 10px;
+      border: 2px solid #a82675;
+      border-radius: 6px;
+      background: #fff;
+      color: #a82675;
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .pdf-page-icon::after {
+      content: "";
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 18px;
+      height: 18px;
+      border-left: 2px solid #a82675;
+      border-bottom: 2px solid #a82675;
+      border-radius: 0 5px 0 4px;
+      background: #f7dcea;
+    }
+
+    .pdf-page-preview strong {
+      max-width: 260px;
+      overflow: hidden;
+      color: #1f2d3d;
+      font-size: 15px;
+      font-weight: 800;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .pdf-page-preview span {
+      color: #607089;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .crop-frame.dragging .crop-image,
+    .crop-frame.dragging .crop-pdf {
       transition: none;
     }
 
@@ -3852,6 +3936,7 @@
     function createUploader(config) {
       const crop = document.getElementById(config.cropId);
       const image = crop.querySelector('.crop-image');
+      const pdfPreview = document.createElement('div');
       const empty = crop.querySelector('.crop-empty');
       const uploadCard = crop.closest('.upload-card');
       const title = uploadCard.querySelector('h1');
@@ -3886,8 +3971,74 @@
         cropHeight: defaultCropBox.height,
         resizeStartCrop: null,
         hasImage: false,
-        isPdf: false
+        isPdf: false,
+        fileName: '',
+        pdfPageCount: 1,
+        pdfPageHeight: 0,
+        pdfStackHeight: 0
       };
+
+      pdfPreview.className = 'crop-pdf';
+      pdfPreview.title = `${config.target === 'back' ? 'Back' : 'Front'} ID PDF preview`;
+      pdfPreview.style.display = 'none';
+      pdfPreview.setAttribute('aria-hidden', 'true');
+      crop.insertBefore(pdfPreview, empty);
+
+      function activePreview() {
+        return state.isPdf ? pdfPreview : image;
+      }
+
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function getPdfPreviewMarkup(fileName = 'Selected PDF', src = '', pageCount = 1) {
+        const safePageCount = Math.max(1, Number(pageCount) || 1);
+        const pageText = pageCount > 1 ? `${pageCount} PDF pages detected. ` : '';
+        const fallback = `
+          <div class="pdf-page-preview">
+            <div class="pdf-page-icon" aria-hidden="true">PDF</div>
+            <strong>${escapeHtml(fileName)}</strong>
+            <span>${pageText}Drag, zoom, rotate, fit, or center this preview.</span>
+          </div>
+        `;
+        if (!src) return fallback;
+        return Array.from({ length: safePageCount }, (_, index) => {
+          const pageNumber = index + 1;
+          const pdfSrc = `${src}#page=${pageNumber}&toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
+          return `
+            <object class="pdf-native-preview" data="${escapeHtml(pdfSrc)}" type="application/pdf" aria-label="${escapeHtml(fileName)} PDF page ${pageNumber} preview">
+              ${fallback}
+            </object>
+          `;
+        }).join('');
+      }
+
+      async function estimatePdfPageCount(file) {
+        if (!file || file.type !== 'application/pdf') return 1;
+        try {
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          let text = '';
+          const chunkSize = 32768;
+          for (let index = 0; index < bytes.length; index += chunkSize) {
+            let chunk = '';
+            const slice = bytes.subarray(index, index + chunkSize);
+            for (let byteIndex = 0; byteIndex < slice.length; byteIndex += 1) {
+              chunk += String.fromCharCode(slice[byteIndex]);
+            }
+            text += chunk;
+          }
+          const matches = text.match(/\/Type\s*\/Page\b/g);
+          return clamp(matches ? matches.length : 1, 1, 20);
+        } catch (error) {
+          return 1;
+        }
+      }
 
       function applyCropBox() {
         crop.style.setProperty('--crop-left', `${state.cropLeft}%`);
@@ -3900,7 +4051,7 @@
         if (state.renderFrame) return;
         state.renderFrame = requestAnimationFrame(() => {
           state.renderFrame = null;
-          image.style.transform = `translate(calc(-50% + ${state.x}px), calc(-50% + ${state.y}px)) rotate(${state.rotation}deg) scale(${state.scale})`;
+          activePreview().style.transform = `translate(calc(-50% + ${state.x}px), calc(-50% + ${state.y}px)) rotate(${state.rotation}deg) scale(${state.scale})`;
         });
       }
 
@@ -3909,7 +4060,7 @@
           cancelAnimationFrame(state.renderFrame);
           state.renderFrame = null;
         }
-        image.style.transform = `translate(calc(-50% + ${state.x}px), calc(-50% + ${state.y}px)) rotate(${state.rotation}deg) scale(${state.scale})`;
+        activePreview().style.transform = `translate(calc(-50% + ${state.x}px), calc(-50% + ${state.y}px)) rotate(${state.rotation}deg) scale(${state.scale})`;
       }
 
       function clamp(value, min, max) {
@@ -3918,8 +4069,13 @@
 
       function clampPosition() {
         const frame = crop.getBoundingClientRect();
-        const maxX = frame.width * 0.42;
-        const maxY = frame.height * 0.42;
+        const preview = activePreview();
+        const baseWidth = preview.offsetWidth || preview.getBoundingClientRect().width / Math.max(state.scale, 0.01);
+        const baseHeight = preview.offsetHeight || preview.getBoundingClientRect().height / Math.max(state.scale, 0.01);
+        const scaledWidth = baseWidth * state.scale;
+        const scaledHeight = baseHeight * state.scale;
+        const maxX = Math.max(frame.width * 0.12, (scaledWidth + frame.width) / 2 - 48);
+        const maxY = Math.max(frame.height * 0.12, (scaledHeight + frame.height) / 2 - 48);
         state.x = clamp(state.x, -maxX, maxX);
         state.y = clamp(state.y, -maxY, maxY);
       }
@@ -3933,6 +4089,19 @@
       }
 
       function fitImageToFrame() {
+        if (state.isPdf) {
+          const frame = crop.getBoundingClientRect();
+          const pageWidth = frame.width * 0.82;
+          const pageHeight = pageWidth * 1.42;
+          const pageGap = 0;
+          state.pdfPageHeight = pageHeight;
+          state.pdfStackHeight = pageHeight * state.pdfPageCount + pageGap;
+          pdfPreview.style.width = `${pageWidth}px`;
+          pdfPreview.style.setProperty('--pdf-page-height', `${pageHeight}px`);
+          pdfPreview.style.height = `${state.pdfStackHeight}px`;
+          return;
+        }
+
         if (!image.naturalWidth || !image.naturalHeight) return;
 
         const frame = crop.getBoundingClientRect();
@@ -3954,7 +4123,9 @@
       function resetPosition(options = {}) {
         if (options.fit) fitImageToFrame();
         state.x = 0;
-        state.y = 0;
+        state.y = state.isPdf && state.pdfPageCount > 1
+          ? (state.pdfStackHeight - state.pdfPageHeight) / 2
+          : 0;
         state.scale = 1;
         state.rotation = 0;
         zoomInput.value = '1';
@@ -3970,7 +4141,14 @@
       }
 
       function refreshFit() {
-        if (!state.hasImage || state.isPdf || !image.naturalWidth) return;
+        if (!state.hasImage) return;
+        if (state.isPdf) {
+          const renderedPdf = pdfPreview.getBoundingClientRect();
+          if (renderedPdf.width > 2 && renderedPdf.height > 2) return;
+          resetPosition({ fit: true });
+          return;
+        }
+        if (!image.naturalWidth) return;
         const rendered = image.getBoundingClientRect();
         if (rendered.width > 2 && rendered.height > 2) return;
         resetPosition({ fit: true });
@@ -4006,20 +4184,29 @@
         `;
       }
 
-      function useFile(file) {
+      async function useFile(file) {
         if (!file) return;
         if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
 
         state.hasImage = true;
         state.isPdf = file.type === 'application/pdf';
+        state.fileName = file.name;
+        state.pdfPageCount = state.isPdf ? await estimatePdfPageCount(file) : 1;
         state.objectUrl = URL.createObjectURL(file);
-        image.src = state.objectUrl;
-        image.style.display = state.isPdf ? 'none' : 'block';
-        image.onload = () => resetPosition({ fit: true });
-        empty.textContent = state.isPdf
-          ? 'PDF selected. Reposition preview is available for image files only.'
-          : '';
-        empty.style.display = state.isPdf ? 'grid' : 'none';
+        if (state.isPdf) {
+          pdfPreview.innerHTML = getPdfPreviewMarkup(file.name, state.objectUrl, state.pdfPageCount);
+          pdfPreview.style.display = 'grid';
+          image.removeAttribute('src');
+          image.style.display = 'none';
+        } else {
+          image.src = state.objectUrl;
+          image.style.display = 'block';
+          pdfPreview.innerHTML = '';
+          pdfPreview.style.display = 'none';
+          image.onload = () => resetPosition({ fit: true });
+        }
+        empty.textContent = '';
+        empty.style.display = 'none';
         crop.classList.remove('drag-over');
         crop.classList.add('has-image');
         crop.closest('.upload-card').classList.remove('waiting-for-file');
@@ -4040,13 +4227,22 @@
 
         state.hasImage = true;
         state.isPdf = preview.isPdf;
-        image.src = preview.src;
-        image.style.display = preview.isPdf ? 'none' : 'block';
-        image.onload = () => resetPosition({ fit: true });
-        empty.textContent = preview.isPdf
-          ? 'PDF selected. Reposition preview is available for image files only.'
-          : '';
-        empty.style.display = preview.isPdf ? 'grid' : 'none';
+        state.fileName = preview.fileName || 'Selected PDF';
+        state.pdfPageCount = preview.pdfPageCount || 1;
+        if (preview.isPdf) {
+          pdfPreview.innerHTML = getPdfPreviewMarkup(state.fileName, preview.src, state.pdfPageCount);
+          pdfPreview.style.display = 'grid';
+          image.removeAttribute('src');
+          image.style.display = 'none';
+        } else {
+          image.src = preview.src;
+          image.style.display = 'block';
+          pdfPreview.innerHTML = '';
+          pdfPreview.style.display = 'none';
+          image.onload = () => resetPosition({ fit: true });
+        }
+        empty.textContent = '';
+        empty.style.display = 'none';
         crop.classList.add('has-image');
         crop.closest('.upload-card').classList.remove('waiting-for-file');
         setTitleForState(true);
@@ -4065,6 +4261,10 @@
 
         state.hasImage = false;
         state.isPdf = false;
+        state.fileName = '';
+        state.pdfPageCount = 1;
+        state.pdfPageHeight = 0;
+        state.pdfStackHeight = 0;
         state.pointers.clear();
         state.resizing = false;
         crop.classList.remove('resizing');
@@ -4074,6 +4274,10 @@
         image.style.width = '';
         image.style.height = '';
         image.style.display = 'none';
+        pdfPreview.innerHTML = '';
+        pdfPreview.style.width = '';
+        pdfPreview.style.height = '';
+        pdfPreview.style.display = 'none';
         empty.textContent = 'Select or drop an image to preview it here.';
         empty.innerHTML = getEmptyUploadMarkup(uploadSide);
         empty.style.display = 'grid';
@@ -4110,7 +4314,9 @@
       function getPreview() {
         return {
           src: state.objectUrl || image.src,
-          isPdf: state.isPdf
+          isPdf: state.isPdf,
+          fileName: state.fileName,
+          pdfPageCount: state.pdfPageCount
         };
       }
 
@@ -4124,7 +4330,7 @@
       });
 
       crop.addEventListener('pointerdown', (event) => {
-        if (!state.hasImage || image.style.display === 'none') return;
+        if (!state.hasImage || activePreview().style.display === 'none') return;
         const handle = event.target.closest('[data-crop-handle]');
         if (handle) {
           event.preventDefault();
@@ -4300,7 +4506,7 @@
 
       document.querySelectorAll(`[data-crop-target="${config.cropId}"]`).forEach((button) => {
         button.addEventListener('click', () => {
-          if (!state.hasImage || image.style.display === 'none') return;
+          if (!state.hasImage || activePreview().style.display === 'none') return;
           const control = button.closest('.zoom-control');
           if (control) {
             control.querySelectorAll('[data-adjust-control]').forEach((tool) => {
